@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract AdvancedStorage {
+    address public owner;
+    string public storedData;
+    uint256 public lastUpdateTime;
+    uint256 public updateCount;
+    mapping(address => bool) public authorizedUsers;
+
+    event DataUpdated(address indexed user, string newData);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+    modifier onlyAuthorized() {
+        require(authorizedUsers[msg.sender], "Caller is not authorized");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+        authorizedUsers[msg.sender] = true;
+    }
+
+    function set(string memory newData) external onlyAuthorized {
+        storedData = newData;
+        lastUpdateTime = block.timestamp;
+        updateCount++;
+        emit DataUpdated(msg.sender, newData);
+    }
+
+    function get() external view returns (string memory, uint256, uint256) {
+        return (storedData, lastUpdateTime, updateCount);
+    }
+
+    function authorizeUser(address user) external onlyOwner {
+        authorizedUsers[user] = true;
+    }
+
+    function revokeAuthorization(address user) external onlyOwner {
+        authorizedUsers[user] = false;
+    }
+}
