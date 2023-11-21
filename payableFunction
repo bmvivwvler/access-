@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract EnhancedStorageWithPayment {
+    address public owner;
+    string public storedData;
+    uint256 public creationTimestamp;
+    bool public isLocked;
+
+    event DataStored(address indexed user, string data, uint256 amountPaid);
+    event DataDeleted(address indexed deleter);
+    event ContractLocked(address indexed locker);
+    event ContractUnlocked(address indexed unlocker);
+    event FundsWithdrawn(address indexed withdrawer, uint256 amount);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+    modifier notLocked() {
+        require(!isLocked, "Contract is locked and data cannot be modified");
+        _;
+    }
+
+    modifier payableFunction() {
+        require(msg.value > 0, "Payment required for this function");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+        creationTimestamp = block.timestamp;
+        isLocked = false;
+    }
+
+    function set(string memory newData) external payable onlyOwner notLocked payableFunction {
+        storedData = newData;
+        emit DataStored(msg.sender, newData, msg.value);
+    }
+
+    function get() external view returns (string memory) {
+        return storedData;
+    }
+
+    function deleteData() external onlyOwner notLocked {
+        delete storedData;
+        emit DataDeleted(msg.sender);
+    }
+
+    function lockContract() external onlyOwner {
+        isLocked = true;
+        emit ContractLocked(msg.sender);
+    }
+
+    function unlockContract() external onlyOwner {
+        isLocked = false;
+        emit ContractUnlocked(msg.sender);
+    }
+
+    function withdrawFunds(uint256 amount) external onlyOwner {
+        require(amount <= address(this).balance, "Insufficient contract balance");
+        payable(owner).transfer(amount);
+        emit FundsWithdrawn(msg.sender, amount);
+    }
+
+    // Fallback function to receive Ether
+    receive() external payable {}
+}
